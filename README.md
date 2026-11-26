@@ -40,10 +40,12 @@ disponível somente no próprio PC em `http://127.0.0.1:8765`.
 Para o piloto, conecte o celular e o PC à mesma rede Wi-Fi privada e execute
 `inventario_desktop\iniciar_inventario_web_rede.bat`. O atalho pede o IPv4
 privado do PC (consulte `ipconfig`) e vincula o servidor somente a esse
-adaptador. Abra no celular o endereço `http://IP_DO_PC:8765`, digite o material
-e o peso e registre. Um leitor
+adaptador. Abra no celular o endereço `http://IP_DO_PC:8765`, digite o material,
+informe o peso e bipe o ID único da etiqueta. Um leitor
 Bluetooth configurado como teclado HID pareado com o celular também pode
-preencher o campo do código. O registro é gravado no banco SQLite desse PC;
+preencher os campos de código e ID da etiqueta. IDs já registrados são
+recusados, mesmo quando diferem apenas em maiúsculas/minúsculas ou espaços nas
+pontas. O registro é gravado no banco SQLite desse PC;
 não é enviado ao GitHub. A tela Histórico do aplicativo desktop pode ser
 atualizada ao abrir/selecionar a aba.
 
@@ -58,6 +60,14 @@ O GitHub pode guardar o código-fonte, mas não hospeda este servidor Python nem
 armazena os registros. O servidor web só deve ser iniciado em um PC aprovado e
 os dados continuam no banco local descrito abaixo.
 
+Na primeira utilização do Streamlit, crie a senha administrativa no aplicativo
+desktop em **MATERIAIS · ADMIN**. No navegador, use o menu lateral para entrar
+como administrador e acessar o histórico (com filtros e exportação Excel) ou
+gerenciar materiais. No histórico, um registro individual pode ser selecionado
+pelo número e excluído após confirmação. Essas áreas não ficam disponíveis
+antes da autenticação; a tela de registro continua sem senha. A senha é
+verificada pelo hash PBKDF2 salvo no banco local e não deve ser compartilhada.
+
 Se o Python padrão não tiver Tkinter, use um Python instalado e habilitado pela
 TI. A aplicação não solicita nem contorna permissões administrativas.
 
@@ -65,13 +75,17 @@ TI. A aplicação não solicita nem contorna permissões administrativas.
 
 1. Na primeira execução, os três materiais iniciais são inseridos no banco:
    `4000001733`, `4000000416` e `4000000417`, todos na categoria PVC.
-2. Na aba **NOVO REGISTRO**, bipar o código; o coletor HID funciona como teclado.
+2. Na aba **NOVO REGISTRO**, bipar o código do material; o coletor HID funciona
+   como teclado.
 3. Após o ENTER do código, o cursor vai para o peso.
-4. Após o ENTER automático do peso, o foco vai para **REGISTRAR BAG**. A leitura
+4. Após o ENTER do peso, o cursor vai para o ID da etiqueta. Bipe o ID único;
+   se ele já tiver sido registrado, o sistema avisa e não permite duplicá-lo.
+   Após o ENTER do ID, o foco vai para **REGISTRAR BAG**. A leitura
    não salva sozinha: confirme com outro ENTER ou clique no botão. Um ENTER
    repetido em menos de meio segundo é ignorado como repetição do coletor.
-5. Código, peso, descrição e categoria ficam salvos individualmente. Depois do
-   sucesso, os campos são limpos e o foco volta ao código.
+5. Código, ID da etiqueta, peso, descrição e categoria ficam salvos
+   individualmente. Depois do sucesso, os campos são limpos e o foco volta ao
+   código.
 6. **HISTÓRICO** permite pesquisa, datas inicial/final em `AAAA-MM-DD`, resumo,
    exportação Excel e criação manual de backup.
 7. **MATERIAIS · ADMIN** permite cadastrar, editar e ativar/desativar materiais.

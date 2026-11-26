@@ -116,6 +116,11 @@ class InventoryApplication:
         self.weight_entry = ttk.Entry(self.entry_tab, textvariable=self.weight_var)
         self.weight_entry.pack(fill="x", pady=(6, 10))
 
+        ttk.Label(self.entry_tab, text="ID DA ETIQUETA", style="Field.TLabel").pack(anchor="w")
+        self.label_id_var = tk.StringVar()
+        self.label_id_entry = ttk.Entry(self.entry_tab, textvariable=self.label_id_var)
+        self.label_id_entry.pack(fill="x", pady=(6, 10))
+
         self.ready_card = tk.Label(
             self.entry_tab,
             text="AGUARDANDO INFORMAÇÕES\nA data e a hora serão preenchidas automaticamente.",
@@ -173,11 +178,21 @@ class InventoryApplication:
 
         table_frame = ttk.Frame(self.history_tab)
         table_frame.pack(fill="both", expand=True)
-        columns = ("id", "code", "description", "category", "weight", "date", "time")
+        columns = (
+            "id",
+            "code",
+            "label_id",
+            "description",
+            "category",
+            "weight",
+            "date",
+            "time",
+        )
         self.history_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
         headings = {
             "id": ("Nº", 65),
             "code": ("Código", 125),
+            "label_id": ("ID etiqueta", 150),
             "description": ("Descrição", 310),
             "category": ("Categoria", 100),
             "weight": ("Peso (KG)", 105),
@@ -270,6 +285,9 @@ class InventoryApplication:
                 self.weight_entry.focus_set()
             return "break"
         if focused == self.weight_entry:
+            self.label_id_entry.focus_set()
+            return "break"
+        if focused == self.label_id_entry:
             self._set_ready_message()
             self.register_button.focus_set()
             return "break"
@@ -338,6 +356,7 @@ class InventoryApplication:
                 scanner_prefix=self._scanner_prefix(),
                 scanner_suffix=self._scanner_suffix(),
                 db_path=self.db_path,
+                label_id=self.label_id_var.get(),
             )
         except ValueError as error:
             self._show_entry_message(str(error), False)
@@ -348,11 +367,14 @@ class InventoryApplication:
             self._show_entry_message(f"Erro ao gravar no banco de dados: {error}", False)
         else:
             self._show_entry_message(
-                f"BAG REGISTRADO COM SUCESSO!  Nº {bag_id}  ·  {format_weight(weight)} KG",
+                f"BAG REGISTRADO COM SUCESSO!  Nº {bag_id}  ·  "
+                f"ETIQUETA {self.label_id_var.get().strip().upper()}  ·  "
+                f"{format_weight(weight)} KG",
                 True,
             )
             self.root.bell()
             self.code_var.set("")
+            self.label_id_var.set("")
             self.weight_var.set("")
             self.ready_card.configure(
                 text="AGUARDANDO INFORMAÇÕES\nA data e a hora serão preenchidas automaticamente.",
@@ -414,6 +436,7 @@ class InventoryApplication:
                 values=(
                     record["id"],
                     record["material_code"],
+                    record["label_id"] or "",
                     record["material_description"],
                     record["category"],
                     format_weight(record["weight"]),

@@ -60,7 +60,19 @@ def validate_date(value, label):
         raise ValueError(f"{label}: use o formato AAAA-MM-DD.") from error
 
 
-def register_bag(code, raw_weight, scanner_prefix="", scanner_suffix="", db_path=None):
+def register_bag(
+    code,
+    raw_weight,
+    scanner_prefix="",
+    scanner_suffix="",
+    db_path=None,
+    label_id="",
+):
+    label_id = str(label_id or "").strip().upper()
+    if not label_id:
+        raise ValueError("ID DA ETIQUETA OBRIGATÓRIO.")
+    if database.label_id_is_registered(label_id, db_path):
+        raise ValueError(f"ETIQUETA JÁ REGISTRADA. ID: {label_id}.")
     code = str(code).strip()
     if not code:
         raise ValueError("CÓDIGO DO MATERIAL OBRIGATÓRIO.")
@@ -70,5 +82,11 @@ def register_bag(code, raw_weight, scanner_prefix="", scanner_suffix="", db_path
     if not material["active"]:
         raise ValueError("MATERIAL INATIVO. Solicite a ativação ao administrador.")
     weight = parse_weight(raw_weight, scanner_prefix, scanner_suffix)
-    bag_id = database.insert_bag(material, weight, sao_paulo_now(), db_path)
+    bag_id = database.insert_bag(
+        material,
+        weight,
+        sao_paulo_now(),
+        label_id,
+        db_path,
+    )
     return bag_id, material, weight

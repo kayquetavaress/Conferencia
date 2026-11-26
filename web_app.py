@@ -48,13 +48,15 @@ PAGE = """<!doctype html>
   <main>
     <section>
       <h1>NOVO REGISTRO</h1>
-      <p class="hint">Digite ou bipe o código, informe o peso e registre. Os dados ficam no PC.</p>
+      <p class="hint">Informe o material, digite o peso, bipe o ID único da etiqueta e registre. Os dados ficam no PC.</p>
       <form id="bag-form">
         <label for="code">CÓDIGO DO MATERIAL</label>
         <input id="code" name="code" autocomplete="off" autofocus required>
         <div class="material" id="material">Digite ou bipe o código para identificar o material.</div>
         <label for="weight">PESO (KG)</label>
         <input id="weight" name="weight" inputmode="decimal" autocomplete="off" required>
+        <label for="label-id">ID DA ETIQUETA</label>
+        <input id="label-id" name="label_id" autocomplete="off" required>
         <button id="submit" type="submit">✓ &nbsp; REGISTRAR BAG</button>
       </form>
       <div id="message" role="status" aria-live="polite"></div>
@@ -63,6 +65,7 @@ PAGE = """<!doctype html>
   <script>
     const form = document.querySelector("#bag-form");
     const code = document.querySelector("#code");
+    const labelId = document.querySelector("#label-id");
     const weight = document.querySelector("#weight");
     const button = document.querySelector("#submit");
     const message = document.querySelector("#message");
@@ -70,6 +73,12 @@ PAGE = """<!doctype html>
       if (event.key === "Enter") {
         event.preventDefault();
         weight.focus();
+      }
+    });
+    weight.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        labelId.focus();
       }
     });
     form.addEventListener("submit", async event => {
@@ -81,13 +90,18 @@ PAGE = """<!doctype html>
         const response = await fetch("/api/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: code.value, weight: weight.value })
+          body: JSON.stringify({
+            code: code.value,
+            label_id: labelId.value,
+            weight: weight.value
+          })
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || "Não foi possível registrar.");
-        message.textContent = `BAG REGISTRADO! Nº ${result.id} · ${result.material} · ${result.weight} KG`;
+        message.textContent = `BAG REGISTRADO! Nº ${result.id} · ETIQUETA ${result.label_id} · ${result.material} · ${result.weight} KG`;
         message.className = "success";
         code.value = "";
+        labelId.value = "";
         weight.value = "";
         code.focus();
       } catch (error) {
@@ -159,7 +173,11 @@ class InventoryRequestHandler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
             if not isinstance(payload, dict):
                 raise ValueError
-            bag_id, material, weight = register_bag(payload.get("code", ""), payload.get("weight", ""))
+            bag_id, material, weight = register_bag(
+                payload.get("code", ""),
+                payload.get("weight", ""),
+                label_id=payload.get("label_id", ""),
+            )
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
             message = str(error) or "Solicitação inválida."
             self._send_json(400, {"error": message})
@@ -169,6 +187,7 @@ class InventoryRequestHandler(BaseHTTPRequestHandler):
             return
         self._send_json(201, {
             "id": bag_id,
+            "label_id": str(payload["label_id"]).strip().upper(),
             "material": material["description"],
             "weight": f"{weight:.2f}",
         })

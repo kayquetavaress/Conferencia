@@ -58,6 +58,7 @@ def initialize_database(db_path=None):
             CREATE TABLE IF NOT EXISTS bags (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 material_code TEXT NOT NULL,
+                label_id TEXT,
                 material_description TEXT NOT NULL,
                 category TEXT NOT NULL,
                 weight TEXT NOT NULL,
@@ -75,6 +76,18 @@ def initialize_database(db_path=None):
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+            """
+        )
+        bag_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(bags)")
+        }
+        if "label_id" not in bag_columns:
+            connection.execute("ALTER TABLE bags ADD COLUMN label_id TEXT")
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_bags_label_id
+            ON bags(UPPER(TRIM(label_id)))
+            WHERE label_id IS NOT NULL AND TRIM(label_id) <> ''
             """
         )
         connection.executemany(
@@ -191,27 +204,54 @@ def verify_admin_password(password, db_path=None):
     return hmac.compare_digest(actual, values["admin_hash"])
 
 
-def insert_bag(material, weight, moment, db_path=None):
-    with connect(db_path) as connection:
-        cursor = connection.execute(
-            """
-            INSERT INTO bags (
-                material_code, material_description, category, weight,
-                record_date, record_time, recorded_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                material["code"],
-                material["description"],
-                material["category"],
-                str(weight),
-                moment.strftime("%Y-%m-%d"),
-                moment.strftime("%H:%M:%S"),
-                moment.isoformat(timespec="seconds"),
-            ),
-        )
-        bag_id = cursor.lastrowid
+def insert_bag(material, weight, moment, label_id, db_path=None):
+    label_id = str(label_id or "").strip().upper()
+    if not label_id:
+        raise ValueError("ID DA ETIQUETA OBRIGATÓRIO.")
+    try:
+        with connect(db_path) as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO bags (
+                    material_code, label_id, material_description, category, weight,
+                    record_date, record_time, recorded_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    material["code"],
+                    label_id,
+                    material["description"],
+                    material["category"],
+                    str(weight),
+                    moment.strftime("%Y-%m-%d"),
+                    moment.strftime("%H:%M:%S"),
+                    moment.isoformat(timespec="seconds"),
+                ),
+            )
+            bag_id = cursor.lastrowid
+    except sqlite3.IntegrityError as error:
+        if label_id_is_registered(label_id, db_path):
+            raise ValueError(
+                f"ETIQUETA JÁ REGISTRADA. ID: {label_id}."
+            ) from error
+        raise
     return int(bag_id)
+
+
+def label_id_is_registered(label_id, db_path=None):
+    normalized_id = str(label_id or "").strip().upper()
+    if not normalized_id:
+        return False
+    with connect(db_path) as connection:
+        row = connection.execute(
+            """
+            SELECT 1 FROM bags
+            WHERE UPPER(TRIM(label_id)) = ?
+            LIMIT 1
+            """,
+            (normalized_id,),
+        ).fetchone()
+    return row is not None
 
 
 def query_bags(start_date=None, end_date=None, search="", db_path=None):
@@ -224,14 +264,16 @@ def query_bags(start_date=None, end_date=None, search="", db_path=None):
         clauses.append("record_date <= ?")
         parameters.append(end_date)
     if search:
-        clauses.append("(material_code LIKE ? OR material_description LIKE ?)")
+        clauses.append(
+            "(material_code LIKE ? OR material_description LIKE ? OR label_id LIKE ?)"
+        )
         pattern = "%" + search.strip() + "%"
-        parameters.extend((pattern, pattern))
+        parameters.extend((pattern, pattern, pattern))
     where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     with connect(db_path) as connection:
         rows = connection.execute(
             """
-            SELECT id, material_code, material_description, category,
+            SELECT id, material_code, label_id, material_description, category,
                    weight, record_date, record_time, recorded_at
             FROM bags
             """
@@ -240,6 +282,20 @@ def query_bags(start_date=None, end_date=None, search="", db_path=None):
             parameters,
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def delete_bag(bag_id, db_path=None):
+    try:
+        bag_id = int(bag_id)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Selecione um número de registro válido.") from error
+    if bag_id <= 0:
+        raise ValueError("Selecione um número de registro válido.")
+
+    with connect(db_path) as connection:
+        cursor = connection.execute("DELETE FROM bags WHERE id = ?", (bag_id,))
+        if cursor.rowcount != 1:
+            raise ValueError("O registro selecionado não foi encontrado.")
 
 
 def create_backup(destination, db_path=None):

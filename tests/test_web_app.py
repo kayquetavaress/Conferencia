@@ -24,8 +24,8 @@ class WebAppTests(unittest.TestCase):
         self.register_patch = patch.object(
             web_app,
             "register_bag",
-            side_effect=lambda code, weight: register_bag(
-                code, weight, db_path=self.db_path
+            side_effect=lambda code, weight, label_id: register_bag(
+                code, weight, db_path=self.db_path, label_id=label_id
             ),
         )
         self.register_patch.start()
@@ -48,10 +48,21 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(page.status, 200)
         page_body = page.read().decode("utf-8")
         self.assertIn("NOVO REGISTRO", page_body)
+        self.assertIn("ID DA ETIQUETA", page_body)
         self.assertNotIn("CÓDIGO DE ACESSO", page_body)
+        self.assertLess(
+            page_body.index("CÓDIGO DO MATERIAL"),
+            page_body.index("PESO (KG)"),
+        )
+        self.assertLess(
+            page_body.index("PESO (KG)"),
+            page_body.index("ID DA ETIQUETA"),
+        )
 
         origin = f"http://127.0.0.1:{self.port}"
-        payload = json.dumps({"code": "4000000416", "weight": "12.50"})
+        payload = json.dumps(
+            {"code": "4000000416", "label_id": "ETQ-001", "weight": "12.50"}
+        )
         headers = {"Content-Type": "application/json", "Origin": origin}
         connection.request(
             "POST",
@@ -63,6 +74,19 @@ class WebAppTests(unittest.TestCase):
         result = json.loads(response.read().decode("utf-8"))
         self.assertEqual(response.status, 201)
         self.assertEqual(result["weight"], "12.50")
+        self.assertEqual(result["label_id"], "ETQ-001")
+        self.assertEqual(len(database.query_bags(db_path=self.db_path)), 1)
+
+        connection.request(
+            "POST",
+            "/api/register",
+            body=payload,
+            headers=headers,
+        )
+        duplicate = connection.getresponse()
+        duplicate_result = json.loads(duplicate.read().decode("utf-8"))
+        self.assertEqual(duplicate.status, 400)
+        self.assertIn("ETIQUETA JÁ REGISTRADA", duplicate_result["error"])
         self.assertEqual(len(database.query_bags(db_path=self.db_path)), 1)
 
         connection.request(

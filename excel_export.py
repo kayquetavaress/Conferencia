@@ -52,6 +52,7 @@ def build_workbook(records):
     detail_headers = (
         "Número do registro",
         "Código do material",
+        "ID da etiqueta",
         "Descrição do material",
         "Categoria",
         "Peso (KG)",
@@ -64,6 +65,7 @@ def build_workbook(records):
             (
                 record["id"],
                 record["material_code"],
+                record["label_id"] or "",
                 record["material_description"],
                 record["category"],
                 float(Decimal(str(record["weight"]))),
@@ -71,7 +73,7 @@ def build_workbook(records):
                 datetime.strptime(record["record_time"], "%H:%M:%S").time(),
             )
         )
-    detail.auto_filter.ref = f"A1:G{max(1, detail.max_row)}"
+    detail.auto_filter.ref = f"A1:H{max(1, detail.max_row)}"
     detail.freeze_panes = "A2"
 
     for sheet in (summary, detail):
@@ -92,13 +94,13 @@ def build_workbook(records):
     for row in range(2, total_row + 1):
         summary.cell(row, 5).number_format = WEIGHT_FORMAT
     for row in range(2, detail.max_row + 1):
-        detail.cell(row, 5).number_format = WEIGHT_FORMAT
-        detail.cell(row, 6).number_format = "dd/mm/yyyy"
-        detail.cell(row, 7).number_format = "hh:mm:ss"
+        detail.cell(row, 6).number_format = WEIGHT_FORMAT
+        detail.cell(row, 7).number_format = "dd/mm/yyyy"
+        detail.cell(row, 8).number_format = "hh:mm:ss"
 
     widths = {
         "RESUMO DA PESAGEM": (20, 48, 18, 20, 22),
-        "REGISTRO DE BIPAGENS": (20, 20, 48, 18, 16, 20, 18),
+        "REGISTRO DE BIPAGENS": (20, 20, 24, 48, 18, 16, 20, 18),
     }
     for sheet in (summary, detail):
         for column, width in enumerate(widths[sheet.title], start=1):
