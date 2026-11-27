@@ -1,4 +1,5 @@
 import io
+import hmac
 import sqlite3
 import tempfile
 from datetime import datetime
@@ -7,9 +8,11 @@ from importlib import import_module
 from pathlib import Path
 
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
 
 
 NEW_MATERIAL = "new"
+DEFAULT_ADMIN_PASSWORD = "10203040"
 
 try:
     from inventario_desktop import database
@@ -36,15 +39,18 @@ def _admin_is_authenticated():
     return st.session_state.get("admin_authenticated") is True
 
 
-def _submit_admin_login():
-    if not database.has_admin_password():
-        st.session_state["admin_notice"] = (
-            "error",
-            "Configure a senha no aplicativo desktop deste PC antes de liberar o acesso administrativo.",
+def _configured_admin_password():
+    try:
+        return str(
+            st.secrets.get("FORTLEV_ADMIN_PASSWORD", DEFAULT_ADMIN_PASSWORD)
         )
-        return
+    except StreamlitSecretNotFoundError:
+        return DEFAULT_ADMIN_PASSWORD
+
+
+def _submit_admin_login():
     password = st.session_state.get("admin_password", "")
-    if not database.verify_admin_password(password):
+    if not hmac.compare_digest(password, _configured_admin_password()):
         st.session_state["admin_authenticated"] = False
         st.session_state["admin_notice"] = ("error", "Senha administrativa incorreta.")
         st.session_state["admin_password"] = ""
@@ -324,12 +330,6 @@ def _render_app_styles():
 def _render_admin_access():
     with st.sidebar:
         st.subheader("Área administrativa", anchor=False)
-        try:
-            admin_password_exists = database.has_admin_password()
-        except sqlite3.Error as error:
-            st.error(f"Não foi possível verificar o acesso administrativo: {error}")
-            return
-
         if _admin_is_authenticated():
             st.success("Administrador conectado.", icon=":material/admin_panel_settings:")
             st.button(
@@ -337,11 +337,6 @@ def _render_admin_access():
                 key="admin_logout",
                 on_click=_logout_admin,
                 width="stretch",
-            )
-        elif not admin_password_exists:
-            st.info(
-                "A senha ainda não foi configurada. No PC, abra o aplicativo desktop "
-                "e acesse **MATERIAIS · ADMIN** para criar a senha."
             )
         else:
             with st.form("admin_login_form"):

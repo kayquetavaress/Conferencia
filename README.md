@@ -60,13 +60,16 @@ O GitHub pode guardar o código-fonte, mas não hospeda este servidor Python nem
 armazena os registros. O servidor web só deve ser iniciado em um PC aprovado e
 os dados continuam no banco local descrito abaixo.
 
-Na primeira utilização do Streamlit, crie a senha administrativa no aplicativo
-desktop em **MATERIAIS · ADMIN**. No navegador, use o menu lateral para entrar
-como administrador e acessar o histórico (com filtros e exportação Excel) ou
+No Streamlit, use a senha padrão `10203040` na barra lateral para entrar como
+administrador. A senha de acesso do Streamlit é independente da senha PBKDF2
+que o aplicativo desktop mantém no banco local. Para substituir a senha padrão
+em um deploy Streamlit, configure `FORTLEV_ADMIN_PASSWORD` em **App settings >
+Secrets**; não publique uma senha privada no código. No navegador, o
+administrador pode acessar o histórico (com filtros e exportação Excel) ou
 gerenciar materiais. No histórico, um registro individual pode ser selecionado
-pelo número e excluído após confirmação. Essas áreas não ficam disponíveis
-antes da autenticação; a tela de registro continua sem senha. A senha é
-verificada pelo hash PBKDF2 salvo no banco local e não deve ser compartilhada.
+pelo número e excluído após confirmação. A tela de registro continua sem
+senha. O Cloud não acessa o banco local do PC e não oferece persistência
+confiável para o SQLite local; use um banco hospedado para dados compartilhados.
 
 Se o Python padrão não tiver Tkinter, use um Python instalado e habilitado pela
 TI. A aplicação não solicita nem contorna permissões administrativas.
