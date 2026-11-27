@@ -423,7 +423,7 @@ def _render_registration():
 
     if material and material["active"] and not material_lookup_error:
         st.success(
-            "PRONTO PARA REGISTRAR\n\nA data e a hora serão preenchidas automaticamente.",
+            "PRONTO PARA REGISTRAR",
             icon=":material/check_circle:",
         )
 

@@ -54,6 +54,10 @@ class StreamlitAppTests(unittest.TestCase):
         )
 
         app.text_input(key="material_code").set_value("4000000416").run()
+        self.assertTrue(any(item.value == "PRONTO PARA REGISTRAR" for item in app.success))
+        self.assertFalse(
+            any("A data e a hora serão preenchidas automaticamente." in item.value for item in app.success)
+        )
         app.text_input(key="weight_kg").set_value("125,50").run()
         app.text_input(key="label_id").set_value("ETQ-UI-001").run()
         app.button(key="register_bag_button").click().run()
