@@ -35,6 +35,12 @@ class StreamlitAppTests(unittest.TestCase):
         app = self._run_app()
 
         self.assertFalse(app.exception)
+        self.assertTrue(
+            any(
+                caption.value == "Desenvolvido por Kayque Tavares Gomes"
+                for caption in app.caption
+            )
+        )
         self.assertEqual(len(app.segmented_control), 0)
         labels = [widget.label for widget in app.text_input]
         registration_labels = {

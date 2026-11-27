@@ -360,6 +360,7 @@ def _render_admin_access():
             else:
                 st.error(message)
             st.session_state.pop("admin_notice", None)
+        st.caption("Desenvolvido por Kayque Tavares Gomes")
 
 
 def _render_registration():
