@@ -9,9 +9,17 @@ from pathlib import Path
 
 
 INITIAL_MATERIALS = (
-    ("4000001733", "COMPOSTO PÓ TELHA INCOLOR", "PVC"),
     ("4000000416", "COMPOSTO PÓ PVC BRANCO TUBO ESGOTO", "PVC"),
     ("4000000417", "COMPOSTO PÓ PVC MARROM TUBO SOLDÁVEL", "PVC"),
+    ("4000002859", "COMPOSTO PÓ ROSCAVEL", "PVC"),
+    ("4000000418", "COMPOSTO PÓ CORRUGADO LEVE", "PVC"),
+    ("4000001792", "COMPOSTO PÓ CORRUGADO REFORÇADO", "PVC"),
+    ("4000001331", "COMPOSTO MOÍDO PVC BRANCO", "PVC"),
+    ("4000000628", "COMPOSTO PÓ PVC PRETO", "PVC"),
+    ("4000001395", "COMPOSTO MOÍDO PVC TELHA", "PVC"),
+    ("4000001330", "COMPOSTO MOÍDO PVC MARROM", "PVC"),
+    ("4000001733", "COMPOSTO PÓ TELHA INCOLOR", "PVC"),
+    ("4000001821", "COMPOSTO PÓ PVC BEGE TUBO R", "PVC"),
 )
 HASH_ITERATIONS = 310_000
 
@@ -96,6 +104,18 @@ def initialize_database(db_path=None):
             VALUES (?, ?, ?)
             """,
             INITIAL_MATERIALS,
+        )
+        connection.execute(
+            """
+            UPDATE materials
+            SET description = ?
+            WHERE code = ? AND description = ?
+            """,
+            (
+                "COMPOSTO PÓ PVC BEGE TUBO R",
+                "4000001821",
+                "COMPOSTO PÓ PVC BEGE TUBO SERIE R",
+            ),
         )
 
 

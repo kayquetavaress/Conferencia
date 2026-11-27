@@ -68,6 +68,11 @@ class StreamlitAppTests(unittest.TestCase):
         )
         self.assertTrue(app.button(key="register_bag_button").disabled)
 
+        app.text_input(key="material_code").set_value("4000002859").run()
+        self.assertTrue(
+            any("COMPOSTO PÓ ROSCAVEL" in item.value for item in app.markdown)
+        )
+
     def test_admin_pages_use_default_password_without_database_password(self):
         self.assertFalse(database.has_admin_password())
         app = self._run_app()
